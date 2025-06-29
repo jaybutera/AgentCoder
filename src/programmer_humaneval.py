@@ -3,7 +3,7 @@ import os
 import json
 from tqdm import tqdm
 import copy
-import openai
+import anthropic
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 import time
@@ -13,11 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Setting API parameters
-openai.api_base = "https://api.aiohub.org/v1"
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = anthropic.Anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY")
+)
 
 dataset = load_dataset("openai_humaneval",split="test")
-dataset = [entry for entry in dataset]
+dataset = [entry for entry in dataset][:1]  # Only use the first data sample
 
 prompt_path = "./prompts/humaneval_prompt_update.txt"
 with open(prompt_path, "r") as f:
@@ -36,7 +37,7 @@ def fetch_completion(data_entry, model,lg,times = 5):
     global construct_few_shot_prompt
     if "need_reproduce" in data_entry.keys() and data_entry["need_reproduce"]==False:
         return data_entry
-    prompt = data_entry["prompt"]
+    prompt = data_entry["prompt"]   
     text = f"""
 {construct_few_shot_prompt}
 
@@ -50,16 +51,15 @@ def fetch_completion(data_entry, model,lg,times = 5):
     for i in range(times):
         while True:
             try:
-                completions = openai.ChatCompletion.create(
+                message = client.messages.create(
                     model=model,
-                    stream=False,
+                    max_tokens=4096,
+                    system="You are a software programmer.",
                     messages=[
-                {"role": "system", "content": "You are a software programmer."},
-                {"role": "user", "content":text},
-                    ],
-                    request_timeout=100,
+                        {"role": "user", "content": text}
+                    ]
                 )
-                completion = completions.choices[0]["message"]["content"]
+                completion = message.content[0].text
                 completion = preprocess_data(completion)
 
             except Exception as e:
@@ -88,13 +88,13 @@ def call_fetch_completion_helper(dataset, model,lg):
     return dataset
 
 if __name__ == "__main__":
-    model_list = ["gpt-3.5-turbo-1106"]
+    model_list = ["claude-3-5-sonnet-20241022"]
     language = ["python"]
     for model in model_list:
         for lg in language:
             from datasets import load_dataset
             dataset = load_dataset("openai_humaneval",split="test")
-            dataset = [entry for entry in dataset]
+            dataset = [entry for entry in dataset][:1]  # Only use the first data sample
             with ThreadPoolExecutor(max_workers=5) as executor:
                 future_to_entry = {executor.submit(fetch_completion, copy.deepcopy(entry), model, lg): entry for entry in tqdm(dataset)}
                 for future in tqdm(concurrent.futures.as_completed(future_to_entry)):

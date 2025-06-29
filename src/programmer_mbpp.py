@@ -3,16 +3,17 @@ import os
 import json
 from tqdm import tqdm
 import copy
-import openai
+import anthropic
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 from dotenv import load_dotenv
 
-load_dotenv
+load_dotenv()
 
 # Setting API parameters
-openai.api_base = "https://api.aiohub.org/v1"
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = anthropic.Anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY")
+)
 
 prompt_path = "./prompts/mbpp_prompt_update.txt"
 with open(prompt_path, "r") as f:
@@ -51,16 +52,15 @@ Your code should pass these tests:
 ```
 """
     try:
-        completions = openai.ChatCompletion.create(
-            model = model,
-            stream=False,
+        message = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            system="You are a code developer.",
             messages=[
-        {"role": "system", "content": "You are a code developer."},
-        {"role": "user", "content":text},
-            ],
-            request_timeout=100,
+                {"role": "user", "content": text}
+            ]
         )
-        data_entry["completion"] = completions.choices[0]["message"]["content"]
+        data_entry["completion"] = message.content[0].text
         data_entry = preprocess_data(data_entry,lg)
         return data_entry
     except Exception as e:
@@ -79,16 +79,15 @@ def fix_bug(data_entry, model,lg,preprocess_data = preprocess_data):
             f"\n```\nPlease fix the bug and return the code. The re-completion code should in triple backticks format(i.e., in ```{lg} ```)."
         )
         try:
-            completions = openai.ChatCompletion.create(
-                model = model,
-                stream=False,
+            message = client.messages.create(
+                model=model,
+                max_tokens=4096,
+                system="You are a code developer assistant.",
                 messages=[
-            {"role": "system", "content": "You are a code developer assistant."},
-            {"role": "user", "content":gpt_prompt},
-                ],
-                request_timeout=100,
+                    {"role": "user", "content": gpt_prompt}
+                ]
             )
-            data_entry["completion"] = completions.choices[0]["message"]["content"]
+            data_entry["completion"] = message.content[0].text
             data_entry = preprocess_data(data_entry,"py")
         except Exception as e:
             print(repr(e))
@@ -125,7 +124,7 @@ def call_completion(dataset, model,lg):
 
 
 if __name__ == "__main__":
-    model_list = ["gpt-3.5-turbo-1106"]
+    model_list = ["claude-3-5-sonnet-20241022"]
     language = ["py"]
     for model in model_list:
         for lg in language:

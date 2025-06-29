@@ -3,7 +3,7 @@ import os
 import json
 from tqdm import tqdm
 import copy
-import openai
+import anthropic
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 import time
@@ -13,10 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Setting API parameters
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = anthropic.Anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY")
+)
 
 dataset = load_dataset("openai_humaneval",split="test")
-dataset = [entry for entry in dataset]
+dataset = [entry for entry in dataset][:1]
 
 prompt_path = "./prompts/test_designer_humaneval_prompt_update.txt"
 with open(prompt_path, "r") as f:
@@ -49,16 +51,15 @@ def fetch_completion(data_entry, model, lg,times=10):
     for i in range(times):
         while True:
             try:
-                completions = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo-1106",
-                    stream=False,
+                message = client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=4096,
+                    system="You are a code developer assistant.",
                     messages=[
-                {"role": "system", "content": "You are a code developer assistant."},
-                {"role": "user", "content":text},
-                    ],
-                    request_timeout=100,
+                        {"role": "user", "content": text}
+                    ]
                 )
-                test_case = completions.choices[0]["message"]["content"]
+                test_case = message.content[0].text
                 test_case = preprocess_data(test_case)
             except Exception as e:
                 time.sleep(20)
@@ -86,7 +87,7 @@ def call_fetch_test_completion_helper(dataset, model,lg):
 
 
 if __name__ == "__main__":
-    model_list = ["gpt-3.5-turbo-1106"]
+    model_list = ["claude-3-5-sonnet-20241022"]
     language = ["python"]
     for model in model_list:
         for lg in language:

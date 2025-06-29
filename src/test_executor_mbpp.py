@@ -152,7 +152,7 @@ def test_agent(dataset,lg):
     return dataset
 
 if __name__ == "__main__":
-    model_list = ["gpt-3.5-turbo-1106"]
+    model_list = ["claude-3-5-sonnet-20241022"]
     language = ["python"]
 
     for model_name in model_list:

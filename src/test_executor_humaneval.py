@@ -207,7 +207,8 @@ def test_agent_concurrency(dataset, lg):
             for k in range(len(test_case_list)):
                 if f"assert {dataset[i]['entry_point']}(" not in test_case_list[k]:
                     continue
-                dataset[i]["full_code"] = test_setup + "\n" + completion_list[j] + "\n" + test_case_list[k]
+                dataset[i]["test_code"] = test_setup + "\n" + completion_list[j] + "\n" + test_case_list[k]
+                dataset[i]["generation"] = completion_list[j]
                 result = check_correctness(dataset[i]["task_id"], dataset[i], lg, 3, "./tmp")
                 if result["passed"]:
                     correct += 1
@@ -242,13 +243,13 @@ def test_agent_concurrency(dataset, lg):
 
 
 if __name__ == "__main__":
-    model_list = ["gpt-3.5-turbo-1106"]
+    model_list = ["claude-3-5-sonnet-20241022"]
     language = ["python"]
     for model in model_list:
         for lg in language:
             path = f"./dataset/{model}_{lg}.json"
             with open(path, "r") as f:
-                dataset = json.load(f)
+                dataset = json.load(f)[:1]  # Only use the first data sample
             epoch = 5
             for current_epoch in range(epoch):
                 dataset = test_agent_concurrency(dataset,lg)

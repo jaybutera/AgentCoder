@@ -11,7 +11,7 @@ AgentCoder is a novel multiagent-code generation framework that leverages the po
 
 ## Installation
 
-To use AgentCoder, you need to have an API key from OpenAI or other similar third-party providers.
+To use AgentCoder, you need to have an API key from Anthropic for Claude Sonnet.
 1. Clone the AgentCoder repository:
    ```
    git clone https://github.com/your-username/AgentCoder.git
@@ -26,7 +26,7 @@ To use AgentCoder, you need to have an API key from OpenAI or other similar thir
 
 3. Add your API key in the `.env` file:
    ```python
-   OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
+   ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
    ```
 
 ## Usage
